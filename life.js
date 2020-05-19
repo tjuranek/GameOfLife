@@ -1,4 +1,5 @@
 const gameboard = document.getElementById('gameboard');
+const iterationCounter = document.getElementById('iterationCounter');
 
 const context = gameboard.getContext('2d');
 context.scale(20, 20);
@@ -95,8 +96,10 @@ All other live cells die in the next generation. Similarly, all other dead cells
 };
 
 let counter = 0;
-let interval = 250;
+let interval = 100;
 let lastTime = 0;
+
+let iterations = 1;
 
 const run = (time = 0) => {
 	const elapsed = time - lastTime;
@@ -104,9 +107,11 @@ const run = (time = 0) => {
 	lastTime = time;
 	counter += elapsed;
 
-	console.log('counter: ' + counter);
-
 	if (counter >= interval) {
+		iterations++;
+
+		iterationCounter.innerText = iterations + ' iterations';
+
 		getNextState();
 		drawGrid(grid);
 
