@@ -1,8 +1,9 @@
 const game = document.getElementById('gameboard');
 const iterationCounter = document.getElementById('iterationCounter');
+const fpsCounter = document.getElementById('fpsCounter');
 
 const context = game.getContext('2d');
-context.scale(10, 10);
+context.scale(3, 3);
 
 function Node(livesRemaining, x, y) {
 	this.x = x;
@@ -131,13 +132,18 @@ const drawGameboardOnCanvas = (canvas, gameboard) => {
 }
 
 let iterationCount = 0;
-let iterationInterval = 10;
+let iterationInterval = 100;
 
+let lastFrameTime = 0;
 let lastRenderTime = 0;
+
+let fps = 0;
 
 let requestId;
 
 const main = (time) => {
+	const startTime = performance.now();
+
 	requestId = undefined;
 
 	const timeSinceLastRender = time - lastRenderTime;
@@ -160,7 +166,20 @@ const main = (time) => {
 		stop();
 	}
 	
+	const endTime = performance.now();
+
+	displayFps(startTime, endTime);
 } 
+
+const displayFps = (startTime, endTime) => {
+	const milliseconds = endTime - startTime;
+	const fps = 1000 * (1 / milliseconds);
+
+	if (fps == Infinity) {
+	}
+
+	fpsCounter.innerText = Math.floor(fps) + ' fps';
+}
 
 const start = () => {
 	if (!requestId) {
@@ -175,7 +194,8 @@ const stop = () => {
 	}
 }
 
-let gameboard = new Gameboard(96, 96);
+//990 540
+let gameboard = new Gameboard(330, 180);
 gameboard.randomlyPopulate();
 
 drawGameboardOnCanvas(context, gameboard);
