@@ -1,128 +1,160 @@
-const gameboard = document.getElementById('gameboard');
+const game = document.getElementById('gameboard');
 const iterationCounter = document.getElementById('iterationCounter');
 
-const context = gameboard.getContext('2d');
-context.scale(20, 20);
+const context = game.getContext('2d');
+context.scale(10, 10);
 
-const makeGrid = (height, width) => {
-	const grid = [];
+function Node(livesRemaining, x, y) {
+	this.x = x;
+	this.y = y;
+	this.livesRemaining = livesRemaining;
 
-	for (let y = 0; y < height; y++) {
-		grid[y] = [];
+	this.incrementLivesRemaining = (count) => {
+		for (let i = 0; i < count; i++) {
+			if (this.livesRemaining < 5) this.livesRemaining++;
+		} 
+	}
 
-		for (var x = 0; x < width; x++) {
-			grid[y][x] = Math.floor(Math.random() * Math.floor(2));
+	this.decrementLivesRemaining = (count) => {
+		for (let i = 0; i < count; i++) {
+			if (this.livesRemaining > 0) this.livesRemaining--;
 		}
 	}
 
-	return grid;
-};
+	this.getNextState = (matrix, height, width) => {
+		const relativeNeighborPositions = [[-1, -1], [-1, 0], [-1, 1], [0, 1], [1, 1], [1, 0], [1, -1], [0, -1]];
 
-const drawGrid = () => {
-	context.fillStyle = 'black';
-	context.fillRect(0, 0, gameboard.width, gameboard.height);
+		let liveNeighborCount = 0;
 
-	context.fillStyle = 'red';
+		relativeNeighborPositions.forEach(direction => {
+			const x = this.x + direction[0];
+			const y = this.y + direction[1];
 
-	grid.forEach((row, y) => {
-		row.forEach((value, x) => {
-			if (value === 1) {
-				context.fillRect(x, y, 1, 1);
+			if (x >= 0 && y >= 0 && x < width && y < height) {
+				if (matrix[x][y].livesRemaining > 0) liveNeighborCount++;
 			}
 		});
-	});
-};
 
-const getNextState = () => {
-	const tempGrid = [...grid];
+		if (this.livesRemaining > 0) {
+			switch (liveNeighborCount) {
+				case 0: case 1:
+					this.decrementLivesRemaining(2);
+					break;
+				case 2: case 3: case 4:
+					break;
+				case 5: case 6: case 7:
+					this.decrementLivesRemaining(3);
+					break;
+				case 7:
+					this.incrementLivesRemaining(1);
+					break;
+				case 8:
+					this.decrementLivesRemaining(5);
+					break;
+			}
+		}
+		else {
+			switch (liveNeighborCount) {
+				case 0: case 1: case 2: 
+					break;
+				case 3: case 4:
+					this.incrementLivesRemaining(2)
+					break;
+				case 5: case 6:
+					this.incrementLivesRemaining(1);
+					break;
+				case 7: case 8:
+					break;
+			}
+		}
 
-	for (let y = 0; y < 24; y++) {
-		for (let x = 0; x < 24; x++) {
-			tempGrid[y][x] = getNewState(x, y, grid[y][x]) ? 1 : 0;
+		return this;
+	}
+}
+
+function Gameboard(height, width) {
+	this.height = height;
+	this.width = width;
+	this.matrix = [];
+
+	this.randomlyPopulate = () => {
+		for (let x = 0; x < width; x++) {
+			this.matrix[x] = [];
+	
+			for (let y = 0; y < height; y++) {
+				this.matrix[x][y] = new Node(Math.floor(Math.random() * Math.floor(4)), x, y,);
+			}
 		}
 	}
-	grid = [...tempGrid];
-};
 
-const getAliveNeighborsCount = (x, y) => {
-	const directions = [
-		[-1, -1],
-		[-1, 0],
-		[-1, 1],
-		[0, 1],
-		[1, 1],
-		[1, 0],
-		[1, -1],
-		[0, -1],
-	];
+	this.checkHasLivesCells = () => {
+		const hasLiveCells = false;
 
-	let count = 0;
-
-	directions.forEach((direction) => {
-		const nX = x + direction[0];
-		const nY = y + direction[1];
-
-		if (nX >= 0 && nY >= 0 && nX < 24 && nY < 24) {
-			if (grid[nY][nX] !== 0) count++;
-		}
-	});
-	return count;
-};
-
-const getNewState = (x, y, currentState) => {
-	const count = getAliveNeighborsCount(x, y);
-
-	/*
-	Any live cell with fewer than two live neighbours dies, as if by underpopulation.
-Any live cell with two or three live neighbours lives on to the next generation.
-Any live cell with more than three live neighbours dies, as if by overpopulation.
-Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
-
-These rules, which compare the behavior of the automaton to real life, can be condensed into the following:
-
-Any live cell with two or three live neighbours survives.
-Any dead cell with three live neighbours becomes a live cell.
-All other live cells die in the next generation. Similarly, all other dead cells stay dead.
-	*/
-	if (currentState === 1) {
-		if (2 > count || count >= 4) {
-			return false;
+		for (let x = 0; x < width; x++) {
+			for (let y = 0; y < height; y++) {
+				if (this.matrix[x][y].livesRemaining > 0) {
+					hasLiveCell = true;
+					return hasLiveCells;
+				}
+			}
 		}
 
-		return true;
-	} else {
-		return count === 3;
+		return hasLiveCells;
 	}
-};
 
-let counter = 0;
-let interval = 100;
-let lastTime = 0;
+	this.iterate = () => {
+		const nextState = [...this.matrix];
 
-let iterations = 1;
+		for (let x = 0; x < this.width; x++) {
+			for (let y = 0; y < this.height; y++) {
+				nextState[x][y] = this.matrix[x][y].getNextState(this.matrix, this.height, this.width);
+			}
+		}
+		
+		this.matrix = [...nextState];
+	}
+}
+
+const drawGameboardOnCanvas = (canvas, gameboard) => {
+	canvas.fillStyle = 'black';
+	canvas.fillRect(0, 0, gameboard.width, gameboard.height);
+
+	canvas.fillStyle = 'red';
+
+	for (let x = 0; x < gameboard.width; x++) {
+		for (let y = 0; y < gameboard.height; y++) {
+			if (gameboard.matrix[x][y].livesRemaining > 0) {
+				canvas.fillRect(x, y, 1, 1);
+			}
+		}
+	}
+}
+
+let iterationCount = 0;
+let iterationInterval = 10;
+
+let lastRenderTime = 0;
 
 const run = (time = 0) => {
-	const elapsed = time - lastTime;
+	const timeSinceLastRender = time - lastRenderTime;
 
-	lastTime = time;
-	counter += elapsed;
+	if (timeSinceLastRender > iterationInterval) {
+		lastRenderTime = time;
 
-	if (counter >= interval) {
-		iterations++;
+		iterationCount++;
 
-		iterationCounter.innerText = iterations + ' iterations';
+		gameboard.iterate();
+		drawGameboardOnCanvas(context, gameboard);
 
-		getNextState();
-		drawGrid(grid);
-
-		counter = 0;
+		iterationCounter.innerText = iterationCount + ' iterations';
 	}
 
 	requestAnimationFrame(run);
-};
+}
 
-let grid = makeGrid(24, 24);
+let gameboard = new Gameboard(96, 96);
+gameboard.randomlyPopulate();
 
-drawGrid();
+drawGameboardOnCanvas(context, gameboard);
 
 run();
