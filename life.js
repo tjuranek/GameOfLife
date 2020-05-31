@@ -135,7 +135,11 @@ let iterationInterval = 10;
 
 let lastRenderTime = 0;
 
-const run = (time = 0) => {
+let requestId;
+
+const main = (time) => {
+	requestId = undefined;
+
 	const timeSinceLastRender = time - lastRenderTime;
 
 	if (timeSinceLastRender > iterationInterval) {
@@ -149,7 +153,26 @@ const run = (time = 0) => {
 		iterationCounter.innerText = iterationCount + ' iterations';
 	}
 
-	requestAnimationFrame(run);
+	if (iterationCount < 100) {
+		start();
+	}
+	else {
+		stop();
+	}
+	
+} 
+
+const start = () => {
+	if (!requestId) {
+		requestId = requestAnimationFrame(main);
+	}
+}
+
+const stop = () => {
+	if (requestId) {
+		cancelAnimationFrame(requestId);
+		requestId = undefined;
+	}
 }
 
 let gameboard = new Gameboard(96, 96);
@@ -157,4 +180,4 @@ gameboard.randomlyPopulate();
 
 drawGameboardOnCanvas(context, gameboard);
 
-run();
+start();
