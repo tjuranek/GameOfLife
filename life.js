@@ -1,32 +1,42 @@
+// get page elements
 const game = document.getElementById('gameboard');
 const iterationCounter = document.getElementById('iterationCounter');
-const fpsCounter = document.getElementById('fpsCounter');
 
+// get canvas context and increase scale
 const context = game.getContext('2d');
 context.scale(3, 3);
 
+// nodes represent a cell in the grid. they contain a lives remaining count and are only considered
+// dead if their lives remaining is zero.
 function Node(livesRemaining, x, y) {
 	this.x = x;
 	this.y = y;
 	this.livesRemaining = livesRemaining;
 
+	// never allow more than five health/lives to a single node
 	this.incrementLivesRemaining = (count) => {
 		for (let i = 0; i < count; i++) {
 			if (this.livesRemaining < 5) this.livesRemaining++;
 		} 
 	}
 
+	// never let the health go below zero
 	this.decrementLivesRemaining = (count) => {
 		for (let i = 0; i < count; i++) {
 			if (this.livesRemaining > 0) this.livesRemaining--;
 		}
 	}
 
+	// take in a matrix and determine the next state of the node given how many alive neighbors it has.
+	// most people realize that the matrix should handle this. most people realize this before the last
+	// day of the deadline.
 	this.getNextState = (matrix, height, width) => {
+		// there are eight potential neighbors and these are their positions relative to the node
 		const relativeNeighborPositions = [[-1, -1], [-1, 0], [-1, 1], [0, 1], [1, 1], [1, 0], [1, -1], [0, -1]];
 
 		let liveNeighborCount = 0;
 
+		// get how many neightbors are live nodes
 		relativeNeighborPositions.forEach(direction => {
 			const x = this.x + direction[0];
 			const y = this.y + direction[1];
@@ -36,6 +46,8 @@ function Node(livesRemaining, x, y) {
 			}
 		});
 
+		// cases for incrementing or decrementing lives from a node depending on if it's currently
+		// living and how many live neighbors there are
 		if (this.livesRemaining > 0) {
 			switch (liveNeighborCount) {
 				case 0: case 1:
@@ -69,15 +81,19 @@ function Node(livesRemaining, x, y) {
 			}
 		}
 
+		// we need to return the whole node after we get the next state cause I wrote this poorly
 		return this;
 	}
 }
 
+// the gameboard holds the matrix of all the nodes. 
 function Gameboard(height, width) {
 	this.height = height;
 	this.width = width;
 	this.matrix = [];
 
+	// it took me like two days to realize canvases can't register clicks. oof. instead of my original
+	// idea to let the users set configurations, it's random. 
 	this.randomlyPopulate = () => {
 		for (let x = 0; x < width; x++) {
 			this.matrix[x] = [];
@@ -88,6 +104,7 @@ function Gameboard(height, width) {
 		}
 	}
 
+	// TODO: implement an "end of game" with my stop method
 	this.checkHasLivesCells = () => {
 		const hasLiveCells = false;
 
@@ -103,6 +120,7 @@ function Gameboard(height, width) {
 		return hasLiveCells;
 	}
 
+	// an iteration is just going over all the nodes and getting new states from the current matrix state
 	this.iterate = () => {
 		const nextState = [...this.matrix];
 
@@ -116,12 +134,15 @@ function Gameboard(height, width) {
 	}
 }
 
+// take the canvas context and gameboard and spit out on the canvas. red cells are the alive ones.
 const drawGameboardOnCanvas = (canvas, gameboard) => {
 	canvas.fillStyle = 'black';
 	canvas.fillRect(0, 0, gameboard.width, gameboard.height);
 
 	canvas.fillStyle = 'red';
 
+	// i should've made a wrapper for looping over this all the time and running a passed function on 
+	// each node.
 	for (let x = 0; x < gameboard.width; x++) {
 		for (let y = 0; y < gameboard.height; y++) {
 			if (gameboard.matrix[x][y].livesRemaining > 0) {
@@ -131,23 +152,27 @@ const drawGameboardOnCanvas = (canvas, gameboard) => {
 	}
 }
 
+// keep track of how many iterations have happened, gotta hit 1000+. the interval is the number of 
+// milliseconds between each interval.
 let iterationCount = 0;
 let iterationInterval = 100;
 
+// to keep track of if we should render a new iteration, we gotta keep track of the times that we 
+// go over the main loop and the time that we last rendered a iteration
 let lastFrameTime = 0;
 let lastRenderTime = 0;
 
-let fps = 0;
-
+// this is for requestAnimationFrame, it's how we start and stop
 let requestId;
 
+// the main game loop that's always called by requestAnimationFrame which gives a timestamp
 const main = (time) => {
-	const startTime = performance.now();
-
 	requestId = undefined;
 
 	const timeSinceLastRender = time - lastRenderTime;
 
+	// if it's time to render, reset render time counter, increase iteration count, iterate
+	// the gameboard, draw the gameboard, and display the iteration count
 	if (timeSinceLastRender > iterationInterval) {
 		lastRenderTime = time;
 
@@ -159,34 +184,20 @@ const main = (time) => {
 		iterationCounter.innerText = iterationCount + ' iterations';
 	}
 
-	if (iterationCount < 100) {
-		start();
-	}
-	else {
-		stop();
-	}
-	
-	const endTime = performance.now();
+	// TODO: have pause and play instead of going until an iteration number
+	//iterationCount < 100 ? start() : stop();
 
-	displayFps(startTime, endTime);
+	start();
 } 
 
-const displayFps = (startTime, endTime) => {
-	const milliseconds = endTime - startTime;
-	const fps = 1000 * (1 / milliseconds);
-
-	if (fps == Infinity) {
-	}
-
-	fpsCounter.innerText = Math.floor(fps) + ' fps';
-}
-
+// handles starting the game loop
 const start = () => {
 	if (!requestId) {
 		requestId = requestAnimationFrame(main);
 	}
 }
 
+// handles stopping the game loop
 const stop = () => {
 	if (requestId) {
 		cancelAnimationFrame(requestId);
@@ -194,10 +205,12 @@ const stop = () => {
 	}
 }
 
-//990 540
-let gameboard = new Gameboard(330, 180);
+// declare a gameboard and randomly populate it
+let gameboard = new Gameboard(180, 330);
 gameboard.randomlyPopulate();
 
+// diplay the first iteration
 drawGameboardOnCanvas(context, gameboard);
 
+// start the game
 start();
